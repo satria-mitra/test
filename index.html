@@ -1,0 +1,62 @@
+<html>
+  <head>
+    <title>InfluxDB JavaScript Client Query Example</title>
+    <script type="module">
+      // Import the latest release from the npm repository
+      import { InfluxDB, flux } from 'https://unpkg.com/@influxdata/influxdb-client/dist/index.browser.mjs';
+
+      // InfluxDB configuration
+      const url = 'http://13.60.236.94:8086';
+      const token = 'hgUCzvxU115d997v-3enMJ-1TfZf_Z_LyGUF0qJEruxS_ABkXijn0mLWx1lpRrB_d4eZ3SHxde-ObQVL8RVgiQ==';
+      const org = 'casa';
+      const bucket = 'mqtt-node';
+
+      // Create an InfluxDB client instance
+      const influxDB = new InfluxDB({ url, token });
+
+      // Log results to the console and HTML page
+      const logField = document.getElementById('log');
+      function log(...args) {
+        console.log.apply(console, args);
+        const previousValue = logField.value;
+        logField.value += (previousValue ? '\n' : '') + Array.prototype.slice.call(arguments).join('\n');
+        // Scroll to bottom with the latest results
+        logField.scrollTo(
+          0,
+          logField.scrollHeight <= logField.offsetHeight ? 0 : logField.scrollHeight - logField.offsetHeight
+        );
+      }
+
+      function queryExample(fluxQuery) {
+        log('\n*** QUERY ***');
+        const queryApi = influxDB.getQueryApi(org);
+        queryApi.queryRows(fluxQuery, {
+          next(row, tableMeta) {
+            const o = tableMeta.toObject(row);
+            log(JSON.stringify(o, null, 2)); // Print the query results to the console log
+          },
+          error(error) {
+            log('QUERY FAILED', error);
+          },
+          complete() {
+            log('QUERY FINISHED');
+          },
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const fluxQuery = flux`from(bucket: "${bucket}") |> range(start: -1d) |> filter(fn: (r) => r._measurement == "temperature")`;
+        queryExample(fluxQuery.toString());
+      });
+    </script>
+  </head>
+  <body>
+    <h1>InfluxDB Query Example</h1>
+    <hr />
+    <fieldset>
+      <legend>Log</legend>
+      <textarea id="log" style="width: 100%" rows="25"></textarea>
+      <button onclick="document.getElementById('log').value=''">Clear Log</button>
+    </fieldset>
+  </body>
+</html>
